@@ -172,14 +172,13 @@ def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
                 markersize=2, label=label)
 
 
-
 # Filters are: rows, ts, cpu_count, namespace
 def filter_rtc(dt_key, *argv):#rows:int, cpu_count:int, ts:int = 0):
-    '''Filter by key, rows, ts and cpu_count'''
-
+    '''Filter df_key by, the criteria in argv'''
     dt_filter = 1
     for fil in argv:
-        dt_filter = dt_filter & (dt_key[fil[0]] == fil[1])
+        if (fil[0]) in dt_key:
+            dt_filter = dt_filter & (dt_key[fil[0]] == fil[1])
 
     return dt_key[dt_filter]
 
@@ -300,10 +299,8 @@ def process_experiment(data, key:str,
             dt = filter_rtc(data[key],
                             ('Rows', rows),
                             ('Tasksize', ts),
-                            ('cpu_count', cpu_count))
-
-            if not key.endswith("mpi"):
-                dt = filter_rtc(dt, ('namespace_enabled', 1))
+                            ('cpu_count', cpu_count),
+                            ('namespace_enabled', 1))
 
             add_time(axs[0,i], dt, label, color)
             add_scalability(axs[1,i], dt, label, color)
@@ -313,7 +310,6 @@ def process_experiment(data, key:str,
                         fontsize='x-small',
                         fancybox=True, shadow=True, ncol=2)
 
-
         axs[1,i].legend(loc='upper left',
                         fontsize='x-small',
                         fancybox=True, shadow=True, ncol=2)
@@ -322,8 +318,6 @@ def process_experiment(data, key:str,
         axs[2,i].legend(loc='upper left',
                         fontsize='x-small',
                         fancybox=True, shadow=True, ncol=2)
-
-
 
     plt.subplots_adjust()
 
