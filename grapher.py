@@ -184,12 +184,6 @@ def filter_rtc(dt_key, *argv):#rows:int, cpu_count:int, ts:int = 0):
     return dt_key[dt_filter]
 
 
-def get_min_groups(data, key, rows:int, cpu_count:int):
-    '''Filter by key, rows and cpu_count, but returns the min over all ts'''
-    dt = filter_rtc(data, key, rows, cpu_count)
-    return dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()]
-
-
 def process_tasksize(data,
                      keyslist:list,
                      rows:int,
