@@ -91,7 +91,7 @@ def import_json_list(input_list : list[str]):
                     df_in: pd.DataFrame = pd.DataFrame(fdata[key])
 
                     if key in data:
-                        data[key] = data[key].append(df_in)
+                        data[key] = pd.concat([data[key], df_in], ignore_index=True)
                     else:
                         data[key] = df_in
 
