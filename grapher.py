@@ -152,7 +152,7 @@ def add_scalability(ax, dt_ts, label: str, colorname : str):
 def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
     """Add lines to the graphs."""
     if dt_ts.empty:
-        print("Ignoring: ", label, "is empty", file = sys.stderr)
+        print("Ignoring: ", label, " is empty", file = sys.stderr)
         return
 
     dt_sorted = dt_ts.sort_values(by=['worldsize'])
@@ -167,7 +167,7 @@ def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
     # Division is direct because time comes in ns
     y = complexity / time_per_iter
 
-    ax.errorbar(x, y, fmt ='o-',
+    ax.errorbar(x, y, fmt='o-',
                 linewidth=1, color=colorname,
                 markersize=2, label=label)
 
@@ -325,3 +325,34 @@ def process_experiment(data, key:str,
     filename = "Compare_" + key + "_" + str(rows)
     save_all_files(filename, fig)
     plt.close()
+
+
+def process_final(data, prefix, rows, cpu_count):
+    "Graphs for final doc"
+
+    complexity = get_complexity[prefix](rows)
+
+    fig, ax = plt.subplots()
+    ax.set_xlabel("Number of nodes")
+    ax.set_ylabel("Performance (GFLOPS/sec)")
+
+    color_index = 0
+    for key in data:
+        if not key.startswith(prefix):
+            continue
+
+        dt = filter_rtc(data[key],
+                        ('Rows', rows),
+                        ('cpu_count', cpu_count),
+                        ('namespace_enabled', 1))
+
+        dt = dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()]
+
+        assert (not "iterations" in dt) or (dt["Iterations"].nunique() == 1)
+
+        add_performance(ax, dt, key, colors_bs[color_index][1], complexity)
+        color_index = color_index + 1
+
+
+    plt.legend(loc='upper left', fontsize='small',)
+    save_all_files("Final_" + prefix + "_" + str(rows), fig)
