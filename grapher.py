@@ -335,9 +335,10 @@ def process_experiment(dt, label:str,
     plt.close()
 
 
-def process_final(data, prefix, rows, cpu_count):
+def process_final(data, prefix, rows, cores):
     "Graphs for final doc"
 
+    print("Processing:", prefix, rows, cores)
     complexity = get_complexity[prefix](rows)
 
     fig, ax = plt.subplots()
@@ -351,7 +352,7 @@ def process_final(data, prefix, rows, cpu_count):
 
         dt = filter_rtc(data[key],
                         ('Rows', rows),
-                        ('cpu_count', cpu_count),
+                        ('cpu_count', cores),
                         ('namespace_enabled', 1))
 
         dt = filter_min(dt)
@@ -361,4 +362,5 @@ def process_final(data, prefix, rows, cpu_count):
 
 
     plt.legend(loc='upper left', fontsize='small',)
-    save_all_files("Final_" + prefix + "_" + str(rows), fig)
+    filename : str = "Final_" + prefix + "_" + str(rows) + "_" + str(cores)
+    save_all_files(filename, fig)
