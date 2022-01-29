@@ -252,7 +252,7 @@ def process_tasksize(data,
                fancybox=True, shadow=True, ncol=1)
 
     # Save image file.
-    filename = "Sacalability_" \
+    filename = "Scalability_" \
         + key.split("_")[0] + "_" \
         + str(rows) + "_" \
         + str(ts) + "_" \
