@@ -22,18 +22,18 @@ def process_all(data):
     """Create all the blocksize graphs"""
 
     keys_list : list[str] = list(data.keys());
-    first_dt = data[keys_list[0]]
-
-    # Get all the keys
-    rows_list : list[int] = first_dt['Rows'].drop_duplicates().sort_values().array
-    ts_list : list[int] = first_dt['Tasksize'].drop_duplicates().sort_values().array
-    cpu_list : list[int] = first_dt['cpu_count'].drop_duplicates().sort_values().array
-
 
     # All ts for same experiment.
     for key in keys_list:
+        dt = data[key]
+
+        # Get all the keys
+        rows_list : list[int] = dt['Rows'].drop_duplicates().sort_values().array
+        ts_list : list[int] = dt['Tasksize'].drop_duplicates().sort_values().array
+        cpu_list : list[int] = dt['cpu_count'].drop_duplicates().sort_values().array
+
         for rows in rows_list:
-            gr.process_experiment(data, key, rows, ts_list, cpu_list)
+            gr.process_experiment(dt, key, rows, ts_list, cpu_list)
 
 
 if __name__ == "__main__":

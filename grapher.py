@@ -61,7 +61,7 @@ def save_all_files(filename: str, fig):
                 #bbox_extra_artists=[leg],
                 bbox_inches='tight')
 
-    print("Generated: ", filename)
+    print("Generated:", filename)
 
 def import_json_list(input_list : list[str]):
     '''Imports a group of json files containing experiment results'''
@@ -74,12 +74,12 @@ def import_json_list(input_list : list[str]):
     for fname in input_list:
 
         if fname.split(".")[-1] != "json":
-            print("Import ignores: ", fname, \
+            print("Import ignores:", fname, \
                   "because it is not a json", file = sys.stderr)
             continue
 
         try:
-            print("Loading: ", fname, end="... ")
+            print("Loading:", fname, end="... ")
 
             with open(fname, 'r') as f:
                 fdata = json.load(f)
@@ -106,7 +106,7 @@ def import_json_list(input_list : list[str]):
 def add_time(ax, dt_ts, label: str, colorname : str):
     "Add raw data graph"
     if dt_ts.empty:
-        print("Ignoring: ", label, "is empty", file = sys.stderr)
+        print("Ignoring:", label, "is empty", file = sys.stderr)
         return
 
     dt_sorted = dt_ts.sort_values(by='worldsize')
@@ -123,12 +123,14 @@ def add_time(ax, dt_ts, label: str, colorname : str):
 def add_scalability(ax, dt_ts, label: str, colorname : str):
     """Add lines to the graphs."""
     if dt_ts.empty:
-        print("Ignoring: ", label, "is empty", file = sys.stderr)
+        print("Ignoring:", label, "is empty", file = sys.stderr)
         return
 
     row_one = dt_ts.loc[dt_ts['worldsize'] == 1]
     if len(row_one.axes[0]) != 1:
-        print("Single node problem for : ", label, file = sys.stderr)
+        print("Single node problem for:", label, file = sys.stderr)
+        print("Input data:")
+        print(dt_ts)
         return
 
     dt_sorted = dt_ts.sort_values(by=['worldsize'])
@@ -152,7 +154,7 @@ def add_scalability(ax, dt_ts, label: str, colorname : str):
 def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
     """Add lines to the graphs."""
     if dt_ts.empty:
-        print("Ignoring: ", label, " is empty", file = sys.stderr)
+        print("Ignoring: ", label, "is empty", file = sys.stderr)
         return
 
     dt_sorted = dt_ts.sort_values(by=['worldsize'])
@@ -173,15 +175,19 @@ def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
 
 
 # Filters are: rows, ts, cpu_count, namespace
-def filter_rtc(dt_key, *argv):#rows:int, cpu_count:int, ts:int = 0):
+def filter_rtc(dt, *argv):#rows:int, cpu_count:int, ts:int = 0):
     '''Filter df_key by, the criteria in argv'''
     dt_filter = 1
     for fil in argv:
-        if (fil[0]) in dt_key:
-            dt_filter = dt_filter & (dt_key[fil[0]] == fil[1])
+        if (fil[0]) in dt:
+            dt_filter = dt_filter & (dt[fil[0]] == fil[1])
 
-    return dt_key[dt_filter]
+    return dt[dt_filter]
 
+def filter_min(dt):
+    '''Get the rows with minimum time/worldsize'''
+    assert (not "iterations" in dt) or (dt["Iterations"].nunique() == 1)
+    return dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()]
 
 def process_tasksize(data,
                      keyslist:list,
@@ -256,30 +262,33 @@ def process_tasksize(data,
     plt.close()
 
 
-def process_experiment(data, key:str,
+def process_experiment(dt, label:str,
                        rows:int,
                        ts_list:list[int],
-                       cpu_count_list:list[int]):
+                       cpu_list:list[int]):
     """Create graphs comparing all the TS for same size and num_cpus"""
 
-    fig, axs = plt.subplots(nrows=3, ncols=(len(cpu_count_list)),
+    print("= Plot:", label, rows)
+    fig, axs = plt.subplots(nrows=3, ncols=(len(cpu_list)),
                             sharex=True, sharey="row",
                             gridspec_kw={"hspace": 0, "wspace": 0})
 
     # Title
-    fig.suptitle(key + " " + str(rows))
-    nodes_list : list[int] = data[key]['worldsize'].drop_duplicates().sort_values().array
+    fig.suptitle(label + " " + str(rows))
+    nodes_list : list[int] = dt['worldsize'].drop_duplicates().sort_values().array
 
     axs[0,0].set_ylabel("Time")
     axs[1,0].set_ylabel("Scalability")
     axs[2,0].set_ylabel("Performance(GFLops)")
 
-    prefix : str = key.split("_")[0]
+    prefix : str = label.split("_")[0]
     complexity : int = get_complexity[prefix](rows)
 
-    for i in range(len(cpu_count_list)):
+    dt_rows = filter_rtc(dt, ('Rows', rows), ('namespace_enabled', 1))
 
-        cpu_count : int = cpu_count_list[i]
+    for i in range(len(cpu_list)):
+        cpu_count : int = cpu_list[i]
+        print("== Plotting for:", cpu_count, "cores")
 
         for ax in axs[:,i]:
             ax.grid(color='b', ls = '-.', lw = 0.25)
@@ -290,21 +299,20 @@ def process_experiment(data, key:str,
 
         axs[2,i].set_xlabel('Nodes')
 
+        dt_rows_cpu = filter_rtc(dt_rows, ('cpu_count', cpu_count))
+
         color_index = 0
         for ts in ts_list:
-            label : str = str(ts)
+            linelabel : str = str(ts)
             color = colors_bs[color_index][1]
             color_index = color_index + 1
 
-            dt = filter_rtc(data[key],
-                            ('Rows', rows),
-                            ('Tasksize', ts),
-                            ('cpu_count', cpu_count),
-                            ('namespace_enabled', 1))
+            dt_rows_cpu_ts = filter_rtc(dt_rows_cpu, ('Tasksize', ts))
+            dt_rows_cpu_ts = filter_min(dt_rows_cpu_ts)
 
-            add_time(axs[0,i], dt, label, color)
-            add_scalability(axs[1,i], dt, label, color)
-            add_performance(axs[2,i], dt, label, color, complexity)
+            add_time(axs[0,i], dt_rows_cpu_ts, linelabel, color)
+            add_scalability(axs[1,i], dt_rows_cpu_ts, linelabel, color)
+            add_performance(axs[2,i], dt_rows_cpu_ts, linelabel, color, complexity)
 
         axs[0,i].legend(loc='upper right',
                         fontsize='x-small',
@@ -322,7 +330,7 @@ def process_experiment(data, key:str,
     plt.subplots_adjust()
 
     # Save image file.
-    filename = "Compare_" + key + "_" + str(rows)
+    filename = "Compare_" + label + "_" + str(rows)
     save_all_files(filename, fig)
     plt.close()
 
@@ -346,9 +354,7 @@ def process_final(data, prefix, rows, cpu_count):
                         ('cpu_count', cpu_count),
                         ('namespace_enabled', 1))
 
-        dt = dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()]
-
-        assert (not "iterations" in dt) or (dt["Iterations"].nunique() == 1)
+        dt = filter_min(dt)
 
         add_performance(ax, dt, key, colors_bs[color_index][1], complexity)
         color_index = color_index + 1
