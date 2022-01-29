@@ -32,7 +32,7 @@ plt.rcParams['font.size'] = '8'
 
 pd.set_option('display.max_rows', None)
 
-colors_bs = list(mcolors.TABLEAU_COLORS.items())
+colors_bs = list(mcolors.TABLEAU_COLORS.values()) + list(mcolors.BASE_COLORS.values())
 
 get_complexity = {
     "cholesky" : lambda x: (x**3)/3,
@@ -229,7 +229,7 @@ def process_tasksize(data,
         if key.endswith("mpi"):
             dt = dt.drop_duplicates(subset='worldsize')
 
-            color = colors_bs[color_index][1]
+            color = colors_bs[color_index]
             color_index = color_index  + 1
 
             add_time(axs[0], dt, label, color)
@@ -237,7 +237,7 @@ def process_tasksize(data,
             add_performance(axs[2], dt, label, color, complexity)
         else:
             for ns in range(2):
-                color = colors_bs[color_index][1]
+                color = colors_bs[color_index]
                 color_index = color_index + 1
 
                 dt_ns = filter_rtc(dt, ('namespace_enabled', ns))
@@ -304,7 +304,7 @@ def process_experiment(dt, label:str,
         color_index = 0
         for ts in ts_list:
             linelabel : str = str(ts)
-            color = colors_bs[color_index][1]
+            color = colors_bs[color_index]
             color_index = color_index + 1
 
             dt_rows_cpu_ts = filter_rtc(dt_rows_cpu, ('Tasksize', ts))
@@ -356,7 +356,7 @@ def process_final(data, prefix, rows, cpu_count):
 
         dt = filter_min(dt)
 
-        add_performance(ax, dt, key, colors_bs[color_index][1], complexity)
+        add_performance(ax, dt, key, colors_bs[color_index], complexity)
         color_index = color_index + 1
 
 
