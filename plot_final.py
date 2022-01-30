@@ -17,9 +17,10 @@
 
 import grapher as gr
 import sys
+import pandas as pd
 from typing import *
 
-transdic = {
+transdic : Dict[str, Dict[str, str]] = {
     "matvec" : {
         "matvec_parallelfor_mpi" : "omp+mpi",
         "matvec_strong_flat_task_node_ompss2" : "simpler",
@@ -42,7 +43,9 @@ transdic = {
     }
 }
 
-def process_prefix(data, bench_dict : Dict[str, str], prefix : str):
+def process_prefix(data : Dict[str, pd.DataFrame],
+                   bench_dict : Dict[str, str],
+                   prefix : str):
     '''Process a prefix.'''
     first_key : str = list(bench_dict.keys())[0]
     rows_list : list[int] = data[first_key]['Rows'].drop_duplicates().sort_values().array
@@ -53,7 +56,7 @@ def process_prefix(data, bench_dict : Dict[str, str], prefix : str):
             gr.process_final(data, bench_dict, rows, cpu, prefix)
 
 
-def process_all(data):
+def process_all(data : Dict[str, pd.DataFrame]):
     """Create all the graphs for every prefix."""
 
     keys_list : list[str] = list(data.keys())
@@ -62,7 +65,7 @@ def process_all(data):
     # list of all the benchmarks starting with prefix.
     for prefix in prefix_list:
 
-        bench_list : list(str) = list(key for key in keys_list if key.startswith(prefix))
+        bench_list : list[str] = list(key for key in keys_list if key.startswith(prefix))
         bench_dict : Dict[str, str] =  dict(zip(bench_list, bench_list))
 
         # Get graph with the best data.
@@ -74,5 +77,5 @@ def process_all(data):
 
 
 if __name__ == "__main__":
-    data = gr.import_json_list(sys.argv[1:])
+    data : Dict[str, pd.DataFrame] = gr.import_json_list(sys.argv[1:])
     process_all(data)

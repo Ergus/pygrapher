@@ -34,8 +34,8 @@ pd.set_option('display.max_rows', None)
 
 colors_bs = list(mcolors.TABLEAU_COLORS.values()) + list(mcolors.BASE_COLORS.values())
 
-get_complexity : Dict[str, Callable[[int], int]] = {
-    "cholesky" : lambda x: (x**3)/3,
+get_complexity : Dict[str, Callable[[int], float]] = {
+    "cholesky" : lambda x: (x**3)/3.0,
     "matmul" : lambda x: x**3,
     "matvec" : lambda x: x**2,
     "jacobi" : lambda x: x**2
@@ -105,78 +105,79 @@ def import_json_list(input_list : list[str]) -> Dict[str, pd.DataFrame]:
     return data
 
 
-def add_time(ax, dt_ts, label: str, colorname : str):
+def add_time(ax, dt_ts : pd.DataFrame, label: str, colorname : str):
     "Add raw data graph"
     if dt_ts.empty:
         print("Ignoring:", label, "is empty", file = sys.stderr)
         return
 
-    dt_sorted = dt_ts.sort_values(by='worldsize')
-    x = dt_sorted['worldsize']
+    dt_sorted : pd.DataFrame = dt_ts.sort_values(by='worldsize')
+    x : pd.Series = dt_sorted['worldsize']
 
-    y = dt_sorted['Algorithm_time']
-    erry = dt_sorted['Algorithm_time_stdev'].divide(dt_sorted['executions']**(1/2))
+    y : pd.Series = dt_sorted['Algorithm_time']
+    erry : pd.Series = dt_sorted['Algorithm_time_stdev'].divide(dt_sorted['executions']**(1/2))
 
     ax.errorbar(x, y, yerr = erry, fmt = 'o-',
                 linewidth=0.75, color=colorname,
                 markersize=2, label=label)
 
 
-def add_scalability(ax, dt_ts, label: str, colorname : str):
+def add_scalability(ax, dt_ts : pd.DataFrame, label: str, colorname : str):
     """Add lines to the graphs."""
     if dt_ts.empty:
         print("Ignoring:", label, "is empty", file = sys.stderr)
         return
 
-    row_one = dt_ts.loc[dt_ts['worldsize'] == 1]
+    row_one : pd.DataFrame = dt_ts.loc[dt_ts['worldsize'] == 1]
     if len(row_one.axes[0]) != 1:
         print("Single node problem for:", label, file = sys.stderr)
         print("Input data:")
         print(dt_ts)
         return
 
-    dt_sorted = dt_ts.sort_values(by=['worldsize'])
-    x = dt_sorted['worldsize']
+    dt_sorted : pd.DataFrame = dt_ts.sort_values(by=['worldsize'])
+    x : pd.Series = dt_sorted['worldsize']
 
     one : float = row_one['Algorithm_time'].values[0]
     errone : float = (row_one['Algorithm_time_stdev'] / (row_one['executions']**(1/2))).values[0]
 
     # Error
-    y = dt_sorted['Algorithm_time']
-    erry = dt_sorted['Algorithm_time_stdev'].divide(dt_sorted['executions']**(1/2))
+    y  : pd.Series = dt_sorted['Algorithm_time']
+    erry : pd.Series = dt_sorted['Algorithm_time_stdev'].divide(dt_sorted['executions']**(1/2))
 
-    sy = one / dt_sorted['Algorithm_time']
-    errsy = sy * (erry/y + errone/one)
+    sy : pd.Series = one / dt_sorted['Algorithm_time']
+    errsy : pd.Series = sy * (erry/y + errone/one)
 
     ax.errorbar(x, sy, errsy, fmt ='o-',
                 linewidth=1, color=colorname,
                 markersize=2, label=label)
 
 
-def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
+def add_performance(ax, dt_ts : pd.DataFrame,
+                    label: str, colorname : str, complexity : float):
     """Add lines to the graphs."""
     if dt_ts.empty:
         print("Ignoring: ", label, "is empty", file = sys.stderr)
         return
 
-    dt_sorted = dt_ts.sort_values(by=['worldsize'])
-    x = dt_sorted['worldsize']
+    dt_sorted : pd.DataFrame = dt_ts.sort_values(by=['worldsize'])
+    x : pd.Series = dt_sorted['worldsize']
 
     # Error
-    time_per_iter = dt_sorted['Algorithm_time']
+    time_per_iter : pd.Series = dt_sorted['Algorithm_time']
 
     if "Iterations" in dt_sorted.columns:
         time_per_iter = time_per_iter / dt_sorted["Iterations"]
 
     # Division is direct because time comes in ns
-    y = complexity / time_per_iter
+    y : pd.Series = complexity / time_per_iter
 
     ax.errorbar(x, y, fmt='o-',
                 linewidth=1, color=colorname,
                 markersize=2, label=label)
 
 
-def filter_rtc(dt, **kwargs):
+def filter_rtc(dt : pd.DataFrame, **kwargs) -> pd.DataFrame:
     '''Filter df_key by the criteria in argv'''
     query : str = ""
     for key, value in kwargs.items():
@@ -187,7 +188,7 @@ def filter_rtc(dt, **kwargs):
     return dt.query(query)
 
 
-def filter_min(dt):
+def filter_min(dt : pd.DataFrame) -> pd.DataFrame:
     '''Get the rows with minimum time/worldsize'''
     assert (not "iterations" in dt) or (dt["Iterations"].nunique() == 1)
     return dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()]
@@ -228,7 +229,7 @@ def process_tasksize(data : Dict[str, pd.DataFrame],
         prefix : str = key.split("_")[0]
         label : str = " ".join(key.split("_")[1:]) # "cholesky_memory_ompss2" -> "memory ompss2"
 
-        complexity : int = get_complexity[prefix](rows)
+        complexity : float = get_complexity[prefix](rows)
 
         if key.endswith("mpi"):
             dt = dt.drop_duplicates(subset='worldsize')
@@ -267,10 +268,10 @@ def process_tasksize(data : Dict[str, pd.DataFrame],
 
 
 def process_experiment(dt : pd.DataFrame,
-                       label:str,
-                       rows:int,
-                       ts_list:list[int],
-                       cpu_list:list[int]):
+                       label : str,
+                       rows : int,
+                       ts_list : list[int],
+                       cpu_list : list[int]):
     """Create graphs comparing all the TS for same size and num_cpus"""
 
     print("= Plot:", label, rows)
@@ -286,8 +287,8 @@ def process_experiment(dt : pd.DataFrame,
     axs[1,0].set_ylabel("Scalability")
     axs[2,0].set_ylabel("Performance(GFLops)")
 
-    prefix : str = label.split("_")[0]
-    complexity : int = get_complexity[prefix](rows)
+    prefix : Final[str] = label.split("_")[0]
+    complexity : Final[float] = get_complexity[prefix](rows)
 
     dt_rows = filter_rtc(dt, Rows=rows, namespace_enabled=1)
 
@@ -349,10 +350,10 @@ def process_final(data : Dict[str, pd.DataFrame],
 
     tmp : list[str] = list(set([ key.split("_")[0] for key in bench_dict.keys()]))
     assert(len(tmp) == 1)
-    prefix : str = tmp[0]
+    prefix : Final[str] = tmp[0]
 
     print("Processing:", prefix, rows, cores)
-    complexity : int = get_complexity[prefix](rows)
+    complexity : Final[float] = get_complexity[prefix](rows)
 
     fig, ax = plt.subplots()
     ax.set_xlabel("Number of nodes")

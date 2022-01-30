@@ -17,15 +17,18 @@
 
 import grapher as gr
 import sys
+import pandas as pd
+from typing import *
 
-def process_all(data):
+
+def process_all(data : Dict[str, pd.DataFrame]):
     """Create all the blocksize graphs"""
 
     keys_list : list[str] = list(data.keys());
 
     # All ts for same experiment.
     for key in keys_list:
-        dt = data[key]
+        dt : pd.DataFrame = data[key]
 
         # Get all the keys
         rows_list : list[int] = dt['Rows'].drop_duplicates().sort_values().array
@@ -37,5 +40,5 @@ def process_all(data):
 
 
 if __name__ == "__main__":
-    data = gr.import_json_list(sys.argv[1:])
+    data : Dict[str, pd.DataFrame] = gr.import_json_list(sys.argv[1:])
     process_all(data)
