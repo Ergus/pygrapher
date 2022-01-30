@@ -173,18 +173,13 @@ def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
                 linewidth=1, color=colorname,
                 markersize=2, label=label)
 
-
-# Filters are: rows, ts, cpu_count, namespace
-def filter_rtc(dt, *argv):#rows:int, cpu_count:int, ts:int = 0):
-    '''Filter df_key by, the criteria in argv'''
+def filter_rtc(dt, *argv):
+    '''Filter df_key by the criteria in argv'''
     query = ""
     for filt in argv:
         if (filt[0]) in dt:
             if query: query += " & "
-            query += (filt[0] + " == " + str(filt[1]))
-            #dt_filter = dt_filter & (dt[filt[0]] == filt[1])
-
-    print("Query: ", query)
+            query += ("%s == %s" % filt)
 
     return dt.query(query)
 
@@ -365,6 +360,6 @@ def process_final(data, prefix, rows, cores):
         color_index = color_index + 1
 
 
-    plt.legend(loc='upper left', fontsize='small',)
+    plt.legend(loc='upper left', fontsize='medium',)
     filename : str = "Final_" + prefix + "_" + str(rows) + "_" + str(cores)
     save_all_files(filename, fig)
