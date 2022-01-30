@@ -176,13 +176,13 @@ def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
                 markersize=2, label=label)
 
 
-def filter_rtc(dt, *argv):
+def filter_rtc(dt, **kwargs):
     '''Filter df_key by the criteria in argv'''
-    query = ""
-    for filt in argv:
-        if (filt[0]) in dt:
+    query : str = ""
+    for key, value in kwargs.items():
+        if key in dt:
             if query: query += " & "
-            query += ("%s == %s" % filt)
+            query += "{} == {}".format(key, value)
 
     return dt.query(query)
 
@@ -200,8 +200,8 @@ def process_tasksize(data,
                      cpu_count:int) -> None:
     """Create graphs time vs tasksize"""
 
-    fig, axs = plt.subplots(nrows=3, sharex=True,
-                            sharey=False, gridspec_kw={"hspace": 0})
+    fig, axs = plt.subplots(nrows=3, sharex=True, sharey=False,
+                            gridspec_kw={"hspace": 0})
 
     axs[0].set_ylabel("Time")
     axs[1].set_ylabel("Scalability")
@@ -221,9 +221,9 @@ def process_tasksize(data,
 
     for key in data:
         dt = filter_rtc(data[key],
-                        ('Rows', rows),
-                        ('Tasksize', ts),
-                        ('cpu_count', cpu_count))
+                        Rows=rows,
+                        Tasksize=ts,
+                        cpu_count=cpu_count)
 
         prefix : str = key.split("_")[0]
         label : str = " ".join(key.split("_")[1:]) # "cholesky_memory_ompss2" -> "memory ompss2"
@@ -244,7 +244,7 @@ def process_tasksize(data,
                 color = colors_bs[color_index]
                 color_index = color_index + 1
 
-                dt_ns = filter_rtc(dt, ('namespace_enabled', ns))
+                dt_ns = filter_rtc(dt, namespace_enabled=ns)
                 labelns = label + [" nons", " ns"][ns]
 
                 add_time(axs[0], dt_ns, labelns, color)
@@ -288,22 +288,22 @@ def process_experiment(dt, label:str,
     prefix : str = label.split("_")[0]
     complexity : int = get_complexity[prefix](rows)
 
-    dt_rows = filter_rtc(dt, ('Rows', rows), ('namespace_enabled', 1))
+    dt_rows = filter_rtc(dt, Rows=rows, namespace_enabled=1)
 
     for i in range(len(cpu_list)):
-        cpu_count : int = cpu_list[i]
-        print("== Plotting for:", cpu_count, "cores")
+        cores : int = cpu_list[i]
+        print("== Plotting for:", cores, "cores")
 
         for ax in axs[:,i]:
             ax.grid(color='b', ls = '-.', lw = 0.25)
 
-        axs[0,i].title.set_text(str(cpu_count) + "cores")
+        axs[0,i].title.set_text(str(cores) + "cores")
         axs[0,i].set_yscale('log')
         axs[0,i].set_xticks(nodes_list)
 
         axs[2,i].set_xlabel('Nodes')
 
-        dt_rows_cpu = filter_rtc(dt_rows, ('cpu_count', cpu_count))
+        dt_rows_cpu = filter_rtc(dt_rows, cpu_count=cores)
 
         color_index = 0
         for ts in ts_list:
@@ -311,7 +311,7 @@ def process_experiment(dt, label:str,
             color = colors_bs[color_index]
             color_index = color_index + 1
 
-            dt_rows_cpu_ts = filter_rtc(dt_rows_cpu, ('Tasksize', ts))
+            dt_rows_cpu_ts = filter_rtc(dt_rows_cpu, Tasksize=ts)
             dt_rows_cpu_ts = filter_min(dt_rows_cpu_ts)
 
             add_time(axs[0,i], dt_rows_cpu_ts, linelabel, color)
@@ -353,17 +353,17 @@ def process_final(data, prefix, rows, cores):
     for key in data:
         if not key.startswith(prefix):
             continue
+
         data_key = data[key]
 
         dt = filter_rtc(data[key],
-                        ('Rows', rows),
-                        ('cpu_count', cores),
-                        ('namespace_enabled', 1))
+                        Rows=rows,
+                        cpu_count=cores,
+                        namespace_enabled=1)
         dt = filter_min(dt)
 
         add_performance(ax, dt, key, colors_bs[color_index], complexity)
         color_index = color_index + 1
-
 
     plt.legend(loc='upper left', fontsize='medium',)
     filename : str = "Final_" + prefix + "_" + str(rows) + "_" + str(cores)
