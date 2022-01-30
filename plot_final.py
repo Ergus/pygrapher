@@ -18,22 +18,62 @@
 import grapher as gr
 import sys
 
+transdic = {
+    "matvec" : {
+        "matvec_parallelfor_mpi" : "omp+mpi",
+        "matvec_strong_flat_task_node_ompss2" : "simpler",
+        "matvec_weak_fetchall_task_node_ompss2" : "optimized",
+    },
+    "matmul" : {
+        "matmul_parallelfor_mpi" : "omp+mpi",
+        "matmul_strong_nested_task_node_ompss2" : "simpler",
+        "matmul_strong_flat_task_node_ompss2" : "optimized"
+    },
+    "jacobi" : {
+        "jacobi_parallelfor_mpi" : "omp+mpi",
+        "jacobi_task_fetchall_ompss2" : "ompss2 + tasks",
+        "jacobi_taskfor_ompss2" : "ompss2 + taskfor"
+    },
+    "cholesky" : {
+        "cholesky_omp_mpi" : "omp+mpi",
+        "cholesky_fare_strong_ompss2" : "simpler",
+        "cholesky_fare_ompss2_taskfor" : "optimized"
+    }
+}
+
 def process_all(data):
     """Create all the blocksize graphs"""
 
-    keys_list : list[str] = list(data.keys());
+    keys_list : list[str] = list(data.keys())
+    # List of prefixes.
     prefix_list : list[str]  = list(set([ key.split("_")[0] for key in keys_list]))
 
     first_dt = data[keys_list[0]]
-    # Get all the keys
-    rows_list : list[int] = first_dt['Rows'].drop_duplicates().sort_values().array
-    ts_list : list[int] = first_dt['Tasksize'].drop_duplicates().sort_values().array
-    cpu_list : list[int] = first_dt['cpu_count'].drop_duplicates().sort_values().array
 
+    # list of all the benchmarks starting with prefix.
     for prefix in prefix_list:
+        bench_list = list(key for key in keys_list if key.startswith(prefix))
+
+        print("Prefix list:", bench_list)
+        rows_list : list[int] = data[bench_list[0]]['Rows'].drop_duplicates().sort_values().array
+        cpu_list : list[int] = data[bench_list[0]]['cpu_count'].drop_duplicates().sort_values().array
+
         for rows in rows_list:
             for cpu in cpu_list:
-                gr.process_final(data, prefix, rows, cpu)
+                gr.process_final(data, bench_list, rows, cpu)
+
+    # list of all the benchmarks declared to translate.
+    for prefix in prefix_list:
+        bench_list = transdic[prefix]
+
+        print("Prefix list traduce:", bench_list)
+        first_key = list(bench_list.keys())[0]
+        rows_list : list[int] = data[first_key]['Rows'].drop_duplicates().sort_values().array
+        cpu_list : list[int] = data[first_key]['cpu_count'].drop_duplicates().sort_values().array
+
+        for rows in rows_list:
+            for cpu in cpu_list:
+                gr.process_final(data, bench_list.keys(), rows, cpu, bench_list)
 
 
 if __name__ == "__main__":

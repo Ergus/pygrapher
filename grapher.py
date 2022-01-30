@@ -34,7 +34,7 @@ pd.set_option('display.max_rows', None)
 
 colors_bs = list(mcolors.TABLEAU_COLORS.values()) + list(mcolors.BASE_COLORS.values())
 
-get_complexity = {
+get_complexity : Dict[str, Callable[[int], int]] = {
     "cholesky" : lambda x: (x**3)/3,
     "matmul" : lambda x: x**3,
     "matvec" : lambda x: x**2,
@@ -65,7 +65,7 @@ def save_all_files(filename: str, fig):
     print("Generated:", filename)
 
 
-def import_json_list(input_list : list[str]):
+def import_json_list(input_list : list[str]) -> Dict[str, pd.DataFrame]:
     '''Imports a group of json files containing experiment results'''
 
     data : Dict[str, pd.DataFrame] = {}
@@ -193,7 +193,7 @@ def filter_min(dt):
     return dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()]
 
 
-def process_tasksize(data,
+def process_tasksize(data : Dict[str, pd.DataFrame],
                      keyslist:list,
                      rows:int,
                      ts:int,
@@ -266,7 +266,8 @@ def process_tasksize(data,
     plt.close()
 
 
-def process_experiment(dt, label:str,
+def process_experiment(dt : pd.DataFrame,
+                       label:str,
                        rows:int,
                        ts_list:list[int],
                        cpu_list:list[int]):
@@ -305,7 +306,7 @@ def process_experiment(dt, label:str,
 
         dt_rows_cpu = filter_rtc(dt_rows, cpu_count=cores)
 
-        color_index = 0
+        color_index : int = 0
         for ts in ts_list:
             linelabel : str = str(ts)
             color = colors_bs[color_index]
@@ -339,32 +340,46 @@ def process_experiment(dt, label:str,
     plt.close()
 
 
-def process_final(data, prefix, rows, cores):
+def process_final(data : Dict[str, pd.DataFrame],
+                  bench_list : str,
+                  rows : int,
+                  cores : int,
+                  trans : Dict[str, str] = None ):
     "Graphs for final doc"
 
+    tmp : list[str] = list(set([ key.split("_")[0] for key in bench_list]))
+    assert(len(tmp) == 1)
+    prefix : str = tmp[0]
+
     print("Processing:", prefix, rows, cores)
-    complexity = get_complexity[prefix](rows)
+    complexity : Callable[[int], int] = get_complexity[prefix](rows)
 
     fig, ax = plt.subplots()
     ax.set_xlabel("Number of nodes")
     ax.set_ylabel("Performance (GFLOPS/sec)")
 
-    color_index = 0
-    for key in data:
-        if not key.startswith(prefix):
-            continue
+    color_index : int = 0
+    for bench_name in bench_list:
+        assert bench_name.startswith(prefix)
 
-        data_key = data[key]
+        label = bench_name
+        if trans:
+            if bench_name in trans:
+                label = trans[bench_name]
+            else:
+                continue
 
-        dt = filter_rtc(data[key],
+        dt = filter_rtc(data[bench_name],
                         Rows=rows,
                         cpu_count=cores,
                         namespace_enabled=1)
         dt = filter_min(dt)
 
-        add_performance(ax, dt, key, colors_bs[color_index], complexity)
+
+        add_performance(ax, dt, label, colors_bs[color_index], complexity)
         color_index = color_index + 1
 
     plt.legend(loc='upper left', fontsize='medium',)
-    filename : str = "Final_" + prefix + "_" + str(rows) + "_" + str(cores)
+    fileprefix = "Official_" if trans else "Final_"
+    filename : str = fileprefix + prefix + "_" + str(rows) + "_" + str(cores)
     save_all_files(filename, fig)
