@@ -341,45 +341,36 @@ def process_experiment(dt : pd.DataFrame,
 
 
 def process_final(data : Dict[str, pd.DataFrame],
-                  bench_list : str,
+                  bench_dict : Dict[str, str],
                   rows : int,
                   cores : int,
-                  trans : Dict[str, str] = None ):
+                  fileprefix : str):
     "Graphs for final doc"
 
-    tmp : list[str] = list(set([ key.split("_")[0] for key in bench_list]))
+    tmp : list[str] = list(set([ key.split("_")[0] for key in bench_dict.keys()]))
     assert(len(tmp) == 1)
     prefix : str = tmp[0]
 
     print("Processing:", prefix, rows, cores)
-    complexity : Callable[[int], int] = get_complexity[prefix](rows)
+    complexity : int = get_complexity[prefix](rows)
 
     fig, ax = plt.subplots()
     ax.set_xlabel("Number of nodes")
     ax.set_ylabel("Performance (GFLOPS/sec)")
 
     color_index : int = 0
-    for bench_name in bench_list:
+
+    for bench_name, label in bench_dict.items():
         assert bench_name.startswith(prefix)
-
-        label = bench_name
-        if trans:
-            if bench_name in trans:
-                label = trans[bench_name]
-            else:
-                continue
-
         dt = filter_rtc(data[bench_name],
                         Rows=rows,
                         cpu_count=cores,
                         namespace_enabled=1)
         dt = filter_min(dt)
 
-
         add_performance(ax, dt, label, colors_bs[color_index], complexity)
         color_index = color_index + 1
 
     plt.legend(loc='upper left', fontsize='medium',)
-    fileprefix = "Official_" if trans else "Final_"
-    filename : str = fileprefix + prefix + "_" + str(rows) + "_" + str(cores)
+    filename : str = fileprefix + "_" + prefix + "_" + str(rows) + "_" + str(cores)
     save_all_files(filename, fig)

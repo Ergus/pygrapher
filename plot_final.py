@@ -45,14 +45,12 @@ def process_all(data):
     """Create all the blocksize graphs"""
 
     keys_list : list[str] = list(data.keys())
-    # List of prefixes.
     prefix_list : list[str]  = list(set([ key.split("_")[0] for key in keys_list]))
-
-    first_dt = data[keys_list[0]]
 
     # list of all the benchmarks starting with prefix.
     for prefix in prefix_list:
-        bench_list = list(key for key in keys_list if key.startswith(prefix))
+        bench_list : list(str) = list(key for key in keys_list if key.startswith(prefix))
+        bench_dict : Dict[str, str] =  dict(zip(bench_list, bench_list))
 
         print("Prefix list:", bench_list)
         rows_list : list[int] = data[bench_list[0]]['Rows'].drop_duplicates().sort_values().array
@@ -60,7 +58,7 @@ def process_all(data):
 
         for rows in rows_list:
             for cpu in cpu_list:
-                gr.process_final(data, bench_list, rows, cpu)
+                gr.process_final(data, bench_dict, rows, cpu, "Final")
 
     # list of all the benchmarks declared to translate.
     for prefix in prefix_list:
@@ -73,7 +71,7 @@ def process_all(data):
 
         for rows in rows_list:
             for cpu in cpu_list:
-                gr.process_final(data, bench_list.keys(), rows, cpu, bench_list)
+                gr.process_final(data, bench_list, rows, cpu, "Official")
 
 
 if __name__ == "__main__":
