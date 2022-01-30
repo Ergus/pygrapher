@@ -17,6 +17,7 @@
 
 import grapher as gr
 import sys
+from typing import *
 
 transdic = {
     "matvec" : {
@@ -41,37 +42,35 @@ transdic = {
     }
 }
 
+def process_prefix(data, bench_dict : Dict[str, str], prefix : str):
+    '''Process a prefix.'''
+    first_key : str = list(bench_dict.keys())[0]
+    rows_list : list[int] = data[first_key]['Rows'].drop_duplicates().sort_values().array
+    cpu_list : list[int] = data[first_key]['cpu_count'].drop_duplicates().sort_values().array
+
+    for rows in rows_list:
+        for cpu in cpu_list:
+            gr.process_final(data, bench_dict, rows, cpu, prefix)
+
+
 def process_all(data):
-    """Create all the blocksize graphs"""
+    """Create all the graphs for every prefix."""
 
     keys_list : list[str] = list(data.keys())
     prefix_list : list[str]  = list(set([ key.split("_")[0] for key in keys_list]))
 
     # list of all the benchmarks starting with prefix.
     for prefix in prefix_list:
+
         bench_list : list(str) = list(key for key in keys_list if key.startswith(prefix))
         bench_dict : Dict[str, str] =  dict(zip(bench_list, bench_list))
 
-        print("Prefix list:", bench_list)
-        rows_list : list[int] = data[bench_list[0]]['Rows'].drop_duplicates().sort_values().array
-        cpu_list : list[int] = data[bench_list[0]]['cpu_count'].drop_duplicates().sort_values().array
+        # Get graph with the best data.
+        process_prefix(data, bench_dict, "Final")
 
-        for rows in rows_list:
-            for cpu in cpu_list:
-                gr.process_final(data, bench_dict, rows, cpu, "Final")
-
-    # list of all the benchmarks declared to translate.
-    for prefix in prefix_list:
-        bench_list = transdic[prefix]
-
-        print("Prefix list traduce:", bench_list)
-        first_key = list(bench_list.keys())[0]
-        rows_list : list[int] = data[first_key]['Rows'].drop_duplicates().sort_values().array
-        cpu_list : list[int] = data[first_key]['cpu_count'].drop_duplicates().sort_values().array
-
-        for rows in rows_list:
-            for cpu in cpu_list:
-                gr.process_final(data, bench_list, rows, cpu, "Official")
+        # Get graph filtered with transdic if prefix is defined.
+        if (prefix in transdic):
+            process_prefix(data, transdic[prefix], "Official")
 
 
 if __name__ == "__main__":
