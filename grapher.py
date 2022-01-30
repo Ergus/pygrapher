@@ -41,6 +41,7 @@ get_complexity = {
     "jacobi" : lambda x: x**2
 }
 
+
 def save_all_files(filename: str, fig):
     """Save the graphs to two files."""
 
@@ -62,6 +63,7 @@ def save_all_files(filename: str, fig):
                 bbox_inches='tight')
 
     print("Generated:", filename)
+
 
 def import_json_list(input_list : list[str]):
     '''Imports a group of json files containing experiment results'''
@@ -173,6 +175,7 @@ def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
                 linewidth=1, color=colorname,
                 markersize=2, label=label)
 
+
 def filter_rtc(dt, *argv):
     '''Filter df_key by the criteria in argv'''
     query = ""
@@ -183,10 +186,12 @@ def filter_rtc(dt, *argv):
 
     return dt.query(query)
 
+
 def filter_min(dt):
     '''Get the rows with minimum time/worldsize'''
     assert (not "iterations" in dt) or (dt["Iterations"].nunique() == 1)
     return dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()]
+
 
 def process_tasksize(data,
                      keyslist:list,
