@@ -177,12 +177,16 @@ def add_performance(ax, dt_ts, label: str, colorname : str, complexity : int):
 # Filters are: rows, ts, cpu_count, namespace
 def filter_rtc(dt, *argv):#rows:int, cpu_count:int, ts:int = 0):
     '''Filter df_key by, the criteria in argv'''
-    dt_filter = 1
-    for fil in argv:
-        if (fil[0]) in dt:
-            dt_filter = dt_filter & (dt[fil[0]] == fil[1])
+    query = ""
+    for filt in argv:
+        if (filt[0]) in dt:
+            if query: query += " & "
+            query += (filt[0] + " == " + str(filt[1]))
+            #dt_filter = dt_filter & (dt[filt[0]] == filt[1])
 
-    return dt[dt_filter]
+    print("Query: ", query)
+
+    return dt.query(query)
 
 def filter_min(dt):
     '''Get the rows with minimum time/worldsize'''
@@ -349,12 +353,12 @@ def process_final(data, prefix, rows, cores):
     for key in data:
         if not key.startswith(prefix):
             continue
+        data_key = data[key]
 
         dt = filter_rtc(data[key],
                         ('Rows', rows),
                         ('cpu_count', cores),
                         ('namespace_enabled', 1))
-
         dt = filter_min(dt)
 
         add_performance(ax, dt, key, colors_bs[color_index], complexity)
