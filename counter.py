@@ -27,24 +27,19 @@ except IOError:
     print("File not accessible")
 
 # Pattern for function
-func :str = r'^void\s+((?:\w+)(?:_ompss2|_mpi))\s*\([^)]*\)\s*' + r"({(?s:.+?)^})"
+func :str = r'^void\s+((?:\w+)(?:_ompss2|_mpi))\s*\([^)]*\)\s*({(?s:.+?)^})'
 re_func = re.compile(func, flags=re.MULTILINE)
-
-# Extract printf (where is the benchmark name.)
-extract :str = r'^ *printf *\((.+?)\);'
-re_extract = re.compile(extract, flags=re.MULTILINE)
 
 matches = re.findall(re_func, text)
 
 for i in matches:
-    untab :str = re.sub(r'\t', ' ', i[1])               # replace all tabs with 1 space
-    nobreak :str = re.sub(r' *\\\n *', ' ', noempty)    # join lines ending with \
-    nocomments1 :str = re.sub(r'//.*\n', '\n', nobreak) # comments //
-    nocomments2 :str = re.sub(r'/\*(?s:.+?)\*/', "", nocomments1) # comments /* */
-    noempty :str = re.sub(r'\n *\n', '\n', untab)       # remove all empty lines now.
+    tmp :str = re.sub(r'\t', ' ', i[1])                      # replace all tabs with 1 space
+    #tmp = re.sub(r' *\\\n *', ' ', tmp)                      # join lines ending with \
+    tmp = re.sub(r'//.*\n', '\n', tmp)                       # comments //
+    tmp = re.sub(r'/\*(?s:.+?)\*/', "", tmp)                 # comments /**/
+    tmp = re.sub(r'(assert|myassert|modcheck)\s*\(.+\);', "", tmp)  # no keywords
+    tmp = re.sub(r' +if +\(.+== *0\) *\{[^}]*\}', "", tmp)   # if {print....}
+    tmp = re.sub(r'\n *(?=\n)', '', tmp)                     # no empty lines
 
-    print (nocomments2)
-    # printmatch = re.search(re_extract, nocomments2)
-
-    # print(printmatch.group(0), printmatch.group(1))
-    print("Lines: ", len(re.findall(r'\n', nocomments2)))
+    print (tmp)
+    print("Lines: ", len(re.findall(r'\n', tmp)), '\n')
