@@ -153,29 +153,20 @@ def add_scalability(ax, dt_ts : pd.DataFrame, label: str, colorname : str):
                 markersize=2, label=label)
 
 
-def add_performance(ax, dt_ts : pd.DataFrame,
-                    label: str, colorname : str, complexity : float):
+def add_performance(ax, dt : pd.DataFrame,
+                    label: str, colorname : str):
     """Add lines to the graphs."""
-    if dt_ts.empty:
+    if dt.empty:
         print("Ignoring: ", label, "is empty", file = sys.stderr)
         return
 
-    dt_sorted : pd.DataFrame = dt_ts.sort_values(by=['worldsize'])
-    x : pd.Series = dt_sorted['worldsize']
+    assert 'GFLOPS' in dt.columns
+    assert 'GFLOPS_ERR' in dt.columns
 
-    # Error
-    time_per_iter : pd.Series = dt_sorted['Algorithm_time']
-
-    if "Iterations" in dt_sorted.columns:
-        time_per_iter = time_per_iter / dt_sorted["Iterations"]
-
-    # Division is direct because time comes in ns
-    y : pd.Series = complexity / time_per_iter
-
-    ax.errorbar(x, y, fmt='o-',
+    ax.errorbar(dt['worldsize'], dt['GFLOPS'], dt['GFLOPS_ERR'],
+                fmt='o-',
                 linewidth=1, color=colorname,
                 markersize=2, label=label)
-
 
 def filter_rtc(dt : pd.DataFrame, **kwargs) -> pd.DataFrame:
     '''Filter df_key by the criteria in argv'''
@@ -191,7 +182,27 @@ def filter_rtc(dt : pd.DataFrame, **kwargs) -> pd.DataFrame:
 def filter_min(dt : pd.DataFrame) -> pd.DataFrame:
     '''Get the rows with minimum time/worldsize'''
     assert (not "iterations" in dt) or (dt["Iterations"].nunique() == 1)
-    return dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()]
+    return dt.loc[dt.groupby('worldsize')['Algorithm_time'].idxmin()].sort_values(by=['worldsize']).copy()
+
+
+def get_performance_table(dt : pd.DataFrame, complexity : float) -> pd.DataFrame:
+    assert not dt.empty
+
+    time_per_iter : pd.Series = dt['Algorithm_time'].copy()
+
+    if "Iterations" in dt.columns:
+        assert dt["Iterations"].nunique() == 1
+        time_per_iter /= dt["Iterations"]
+
+    dt = dt.filter(['worldsize', 'Rows', 'Tasksize', 'executions', 'Iterations',
+                    'Algorithm_time', 'Algorithm_time_stdev', 'cpu_count'],
+                   axis=1)
+
+    dt['Complexity'] = complexity
+    dt['GFLOPS'] = complexity / time_per_iter
+    dt['GFLOPS_ERR'] = dt['GFLOPS'] * dt['Algorithm_time_stdev'] / dt['Algorithm_time']
+
+    return dt
 
 
 def process_tasksize(data : Dict[str, pd.DataFrame],
@@ -239,7 +250,9 @@ def process_tasksize(data : Dict[str, pd.DataFrame],
 
             add_time(axs[0], dt, label, color)
             add_scalability(axs[1], dt, label, color)
-            add_performance(axs[2], dt, label, color, complexity)
+
+            dt_perf : pd.DataFrame = get_performance_table(dt, complexity)
+            add_performance(axs[2], dt_perf, label, color)
         else:
             for ns in range(2):
                 color = colors_bs[color_index]
@@ -250,7 +263,9 @@ def process_tasksize(data : Dict[str, pd.DataFrame],
 
                 add_time(axs[0], dt_ns, labelns, color)
                 add_scalability(axs[1], dt_ns, labelns, color)
-                add_performance(axs[2], dt_ns, labelns, color, complexity)
+
+                dt_perf_ns : pd.DataFrame = get_performance_table(dt_ns, complexity)
+                add_performance(axs[2], dt_perf_ns, labelns, color)
 
     plt.legend(bbox_to_anchor=(1,1),
                loc='center left', fontsize='x-small',
@@ -318,7 +333,9 @@ def process_experiment(dt : pd.DataFrame,
 
             add_time(axs[0,i], dt_rows_cpu_ts, linelabel, color)
             add_scalability(axs[1,i], dt_rows_cpu_ts, linelabel, color)
-            add_performance(axs[2,i], dt_rows_cpu_ts, linelabel, color, complexity)
+
+            st_perf = get_performance_table(dt_rows_cpu_ts, complexity)
+            add_performance(axs[2,i], st_perf, linelabel, color)
 
         axs[0,i].legend(loc='upper right',
                         fontsize='x-small',
@@ -360,18 +377,26 @@ def process_final(data : Dict[str, pd.DataFrame],
     ax.set_ylabel("Performance (GFLOPS/sec)")
 
     color_index : int = 0
-
     for bench_name, label in bench_dict.items():
         assert bench_name.startswith(prefix)
-        dt = filter_rtc(data[bench_name],
-                        Rows=rows,
-                        cpu_count=cores,
-                        namespace_enabled=1)
+        dt : pd.DataFrame = filter_rtc(data[bench_name],
+                                       Rows=rows,
+                                       cpu_count=cores,
+                                       namespace_enabled=1)
         dt = filter_min(dt)
 
-        add_performance(ax, dt, label, colors_bs[color_index], complexity)
+        dt_perf : pd.DataFrame = get_performance_table(dt, complexity)
+
+        add_performance(ax, dt_perf, label, colors_bs[color_index])
         color_index = color_index + 1
 
-    plt.legend(loc='upper left', fontsize='medium',)
+        if bench_name != label and cores ==  24:
+            print(bench_name, label)
+            print(dt_perf)
+
+
+
+
     filename : str = fileprefix + "_" + prefix + "_" + str(rows) + "_" + str(cores)
+    plt.legend(loc='upper left', fontsize='medium',)
     save_all_files(filename, fig)
