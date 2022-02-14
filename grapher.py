@@ -198,6 +198,7 @@ def get_performance_table(dt : pd.DataFrame, complexity : float) -> pd.DataFrame
                     'Algorithm_time', 'Algorithm_time_stdev', 'cpu_count'],
                    axis=1)
 
+    dt['Time_per_it'] = time_per_iter
     dt['Complexity'] = complexity
     dt['GFLOPS'] = complexity / time_per_iter
     dt['GFLOPS_ERR'] = dt['GFLOPS'] * dt['Algorithm_time_stdev'] / dt['Algorithm_time']
@@ -390,11 +391,11 @@ def process_final(data : Dict[str, pd.DataFrame],
         add_performance(ax, dt_perf, label, colors_bs[color_index])
         color_index = color_index + 1
 
-        if bench_name != label and cores ==  24:
-            print(bench_name, label)
+        if bench_name == label:
+            print(bench_name)
             print(dt_perf)
-
-
+            fname : str = bench_name + "_" + str(rows) + "_" + str(cores)
+            dt_perf.to_csv(fname + ".csv", index = False)
 
 
     filename : str = fileprefix + "_" + prefix + "_" + str(rows) + "_" + str(cores)
