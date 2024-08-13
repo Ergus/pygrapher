@@ -1,0 +1,53 @@
+;;; Directory Local Variables            -*- no-byte-compile: t -*-
+;;; For more information see (info "(emacs) Directory Variables")
+
+((nil . ((indent-tabs-mode . nil)
+		 (fill-column . 100)
+		 (show-trailing-whitespace . t)
+		 (tab-width . 4)
+		 (c-basic-offset . 4)
+		 (c-doc-comment-style . doxygen)
+		 (compilation-skip-threshold . 2)
+		 (compilation-skip-visited . t)
+		 (compilation-scroll-output . t)
+		 (compilation-max-output-line-length . 600)
+		 ;;(mode . highlight-indent-guides)
+		 (c-file-style . "Google")
+		 (c-file-offsets (arglist-close . 0)
+						 (member-init-intro . +) ;; First line in a member initialization list
+						 ;; (topmost-intro . 0)
+						 (arglist-intro . +)
+						 (statement-cont . (c-lineup-assignments +))
+						 (innamespace . +)
+						 )
+		 (c-cleanup-list . (defun-close-semi))
+		 (c-hanging-braces-alist . ((brace-list-open)
+									(brace-entry-open)
+									(substatement-open . (after))
+									(namespace-open . (after))
+									(namespace-close . (before))
+									(class-open)
+									(class-close . (before))))
+		 (c-hanging-semi&comma-criteria . nil) ;; No newline after , or ;
+		 (c-hanging-colons-alist . nil) ;; no newline after :
+		 ;; (c-comment-only-line-offset . 4)
+		 (eval . (add-hook 'c-special-indent-hook
+						   (lambda ()
+							 "Indent namespaces properly."
+							 (save-excursion
+							   (back-to-indentation)
+							   (let ((initial-pos (point))
+									 (syn-elt (car c-syntactic-context)))
+								 (when (and (eq (c-langelem-sym syn-elt) 'innamespace)
+											(looking-at-p "namespace[[:blank:]]+[[:alnum:]:]+[[:space:]]*{")
+											(re-search-backward "namespace[[:blank:]]+[[:alnum:]:]+[[:space:]]*{" nil t))
+								   (let ((end (point))
+										 (start (line-beginning-position)))
+									 (goto-char initial-pos)
+									 (delete-horizontal-space)
+									 (insert-buffer-substring-no-properties (current-buffer) start end)
+									 )))))))))
+
+;; (python-mode . ((python-shell-interpreter . "py310")
+;;				   (python-shell-interpreter-args . "-i")))
+)
